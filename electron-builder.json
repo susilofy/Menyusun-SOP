@@ -1,0 +1,49 @@
+{
+  "appId": "com.gurumerangkum.penyusunsop",
+  "productName": "Penyusun SOP Sekolah",
+  "copyright": "Copyright © 2026 Susilo Fitri Yatmoko, M.Pd",
+  "directories": {
+    "output": "release",
+    "buildResources": "build"
+  },
+  "files": [
+    "dist/**/*",
+    "electron/**/*",
+    "data/**/*",
+    "package.json"
+  ],
+  "asar": true,
+  "asarUnpack": [
+    "dist/server.cjs"
+  ],
+  "extraResources": [
+    {
+      "from": "data",
+      "to": "data",
+      "filter": ["**/*"]
+    }
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64"]
+      },
+      {
+        "target": "portable",
+        "arch": ["x64"]
+      }
+    ],
+    "artifactName": "${productName}-Setup-${version}.${ext}"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "Penyusun SOP Sekolah"
+  },
+  "portable": {
+    "artifactName": "${productName}-Portable-${version}.${ext}"
+  }
+}

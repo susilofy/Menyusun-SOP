@@ -1,0 +1,8 @@
+{
+  "name": "SOP Sekolah",
+  "description": "Aplikasi AI Penyusun dan Manajemen SOP Sekolah Dasar untuk Kepala Sekolah, memfasilitasi analisis kebutuhan, wawancara pembuatan draft, pelaksana mutu baku, verifikasi dasar hukum, checklist kelengkapan, pengesahan, arsip, dan ekspor Word serta PDF A4 Landscape.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
