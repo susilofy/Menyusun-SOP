@@ -24,6 +24,7 @@
     }
   ],
   "win": {
+    "icon": "electron/assets/icon.png",
     "target": [
       {
         "target": "nsis",
@@ -44,6 +45,7 @@
     "shortcutName": "Penyusun SOP Sekolah"
   },
   "portable": {
-    "artifactName": "${productName}-Portable-${version}.${ext}"
+    "artifactName": "${productName}-Portable-${version}.${ext}",
+    "requestExecutionLevel": "user"
   }
 }

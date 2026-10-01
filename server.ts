@@ -6,21 +6,45 @@ import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
 
-dotenv.config();
-
 const serverDir = typeof __dirname !== "undefined" ? __dirname : path.dirname(fileURLToPath(import.meta.url));
+
+// Dynamic multi-location .env loader for web, local dev, installer, and portable mode
+const possibleEnvLocations = [
+  path.join(process.cwd(), ".env"),
+  process.env.PORTABLE_EXECUTABLE_DIR ? path.join(process.env.PORTABLE_EXECUTABLE_DIR, ".env") : "",
+  process.env.USER_DATA_PATH ? path.join(process.env.USER_DATA_PATH, ".env") : "",
+  path.join(serverDir, ".env"),
+  path.join(serverDir, "..", ".env"),
+].filter(Boolean);
+
+for (const envPath of possibleEnvLocations) {
+  if (fs.existsSync(envPath)) {
+    try {
+      dotenv.config({ path: envPath });
+      break;
+    } catch {}
+  }
+}
+// Default fallback
+dotenv.config();
 
 const PORT = 3000;
 
-// Initialize Gemini SDK with User-Agent telemetry
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY || "",
-  httpOptions: {
-    headers: {
-      "User-Agent": "aistudio-build",
+// Dynamic client initialization with validation
+function getGeminiClient(): GoogleGenAI | null {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey || apiKey.trim() === "" || apiKey === "MY_GEMINI_API_KEY") {
+    return null;
+  }
+  return new GoogleGenAI({
+    apiKey: apiKey.trim(),
+    httpOptions: {
+      headers: {
+        "User-Agent": "aistudio-build",
+      },
     },
-  },
-});
+  });
+}
 
 // Candidate models: prioritize gemini-3.1-flash-lite for higher throughput, then gemini-3.8-flash
 const CANDIDATE_MODELS = [
@@ -33,11 +57,16 @@ async function generateGeminiContentWithRetry(params: {
   contents: any;
   config?: any;
 }): Promise<string> {
+  const client = getGeminiClient();
+  if (!client) {
+    throw new Error("GEMINI_API_KEY belum dikonfigurasi di file .env. Menggunakan generator SOP standar SD.");
+  }
+
   let lastError: any = null;
 
   for (const model of CANDIDATE_MODELS) {
     try {
-      const response = await ai.models.generateContent({
+      const response = await client.models.generateContent({
         model,
         contents: params.contents,
         config: params.config,
@@ -846,15 +875,38 @@ app.use((req, _res, next) => {
 
 // Health check
 app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok", app: "SOP SMART SCHOOL" });
+  const hasApiKey = Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim() !== "" && process.env.GEMINI_API_KEY !== "MY_GEMINI_API_KEY");
+  res.json({ status: "ok", app: "SOP SMART SCHOOL", hasApiKey });
 });
 
 // API 0: Persistent Default Data (School Profile & SOPs)
+function getDataFilePath(): { readPath: string; writePath: string } {
+  let baseDir = path.join(serverDir, "data");
+  if (process.env.PORTABLE_EXECUTABLE_DIR && fs.existsSync(process.env.PORTABLE_EXECUTABLE_DIR)) {
+    baseDir = path.join(process.env.PORTABLE_EXECUTABLE_DIR, "data");
+  } else if (process.env.USER_DATA_PATH) {
+    baseDir = path.join(process.env.USER_DATA_PATH, "data");
+  }
+
+  const writePath = path.join(baseDir, "defaultData.json");
+  let readPath = writePath;
+
+  // Fallback to bundled seed data if user custom file does not exist yet
+  if (!fs.existsSync(readPath)) {
+    const bundledPath = path.join(serverDir, "data", "defaultData.json");
+    if (fs.existsSync(bundledPath)) {
+      readPath = bundledPath;
+    }
+  }
+
+  return { readPath, writePath };
+}
+
 app.get("/api/default-data", (_req, res) => {
   try {
-    const filePath = path.join(serverDir, "data", "defaultData.json");
-    if (fs.existsSync(filePath)) {
-      const fileContent = fs.readFileSync(filePath, "utf-8");
+    const { readPath } = getDataFilePath();
+    if (fs.existsSync(readPath)) {
+      const fileContent = fs.readFileSync(readPath, "utf-8");
       const parsed = JSON.parse(fileContent);
       return res.json({ success: true, data: parsed });
     }
@@ -870,17 +922,17 @@ app.post("/api/default-data", (req, res) => {
     if (!schoolProfile && !sops) {
       return res.status(400).json({ success: false, message: "Data tidak boleh kosong." });
     }
-    const dirPath = path.join(serverDir, "data");
+    const { writePath } = getDataFilePath();
+    const dirPath = path.dirname(writePath);
     if (!fs.existsSync(dirPath)) {
       fs.mkdirSync(dirPath, { recursive: true });
     }
-    const filePath = path.join(dirPath, "defaultData.json");
     const payload = {
       savedAt: new Date().toISOString(),
       schoolProfile,
       sops,
     };
-    fs.writeFileSync(filePath, JSON.stringify(payload, null, 2), "utf-8");
+    fs.writeFileSync(writePath, JSON.stringify(payload, null, 2), "utf-8");
     return res.json({
       success: true,
       message: "Data default berhasil disimpan secara permanen di server.",
@@ -893,9 +945,9 @@ app.post("/api/default-data", (req, res) => {
 
 app.delete("/api/default-data", (_req, res) => {
   try {
-    const filePath = path.join(serverDir, "data", "defaultData.json");
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+    const { writePath } = getDataFilePath();
+    if (fs.existsSync(writePath)) {
+      fs.unlinkSync(writePath);
     }
     return res.json({ success: true, message: "Data default server berhasil direset." });
   } catch (err: any) {
@@ -1072,6 +1124,152 @@ Format balasan HARUS JSON murni valid dengan struktur identitas, dasarHukum, kua
     }
   });
 
+function refineSopLocally(command: string, sopData: any, userInstruction?: string, schoolProfile?: any) {
+  const updated = JSON.parse(JSON.stringify(sopData || {}));
+  if (schoolProfile) {
+    updated.identitas = {
+      ...updated.identitas,
+      namaKepalaSekolah: schoolProfile.namaKepalaSekolah || updated.identitas?.namaKepalaSekolah,
+      nip: schoolProfile.nip || updated.identitas?.nip,
+      unitKerja: schoolProfile.namaSekolah || updated.identitas?.unitKerja,
+      disahkanOleh: `Kepala ${schoolProfile.namaSekolah || "Sekolah"}`,
+    };
+  }
+
+  const cmd = (command || "").toLowerCase();
+
+  if (cmd.includes("redaksi") || cmd.includes("formal") || cmd.includes("bahasa")) {
+    if (Array.isArray(updated.tabelPelaksanaMutuBaku)) {
+      updated.tabelPelaksanaMutuBaku = updated.tabelPelaksanaMutuBaku.map((step: any) => {
+        let text = step.uraianProsedur || "";
+        if (!text.match(/^(Memeriksa|Menelaah|Melakukan|Menyusun|Mengoordinasikan|Menetapkan|Mengesahkan|Mendokumentasikan|Mengevaluasi|Melaporkan)/i)) {
+          text = `Melaksanakan prosedur ${text.toLowerCase()}`;
+        }
+        return {
+          ...step,
+          uraianProsedur: text,
+          persyaratan: step.persyaratan || "Format instrumen dan berkas pendukung",
+          output: step.output || "Dokumen hasil terverifikasi",
+        };
+      });
+    }
+  } else if (cmd.includes("dasar hukum") || cmd.includes("regulasi")) {
+    const officialLegalBasis = [
+      {
+        id: "dh-1",
+        namaRegulasi: "Undang-Undang Nomor 20 Tahun 2003",
+        nomor: "20",
+        tahun: "2003",
+        tentang: "Sistem Pendidikan Nasional",
+        statusVerifikasi: "Terverifikasi Resmi",
+        sumber: "JDIH Kemendikbudristek",
+      },
+      {
+        id: "dh-2",
+        namaRegulasi: "Peraturan Pemerintah Nomor 57 Tahun 2021 jo PP Nomor 4 Tahun 2022",
+        nomor: "57 jo 4",
+        tahun: "2021/2022",
+        tentang: "Standar Nasional Pendidikan",
+        statusVerifikasi: "Terverifikasi Resmi",
+        sumber: "JDIH BPK RI",
+      },
+      {
+        id: "dh-3",
+        namaRegulasi: "Permendikbudristek Nomor 47 Tahun 2023",
+        nomor: "47",
+        tahun: "2023",
+        tentang: "Standar Pengelolaan pada PAUD, Pendidikan Dasar, dan Pendidikan Menengah",
+        statusVerifikasi: "Terverifikasi Resmi",
+        sumber: "JDIH Kemendikbudristek",
+      },
+      {
+        id: "dh-4",
+        namaRegulasi: "Permenpan RB Nomor 35 Tahun 2012",
+        nomor: "35",
+        tahun: "2012",
+        tentang: "Pedoman Penyusunan Standar Operasional Prosedur Administrasi Pemerintahan",
+        statusVerifikasi: "Terverifikasi Resmi",
+        sumber: "JDIH Kemenpan RB",
+      },
+    ];
+    updated.dasarHukum = officialLegalBasis;
+  } else if (cmd.includes("waktu") || cmd.includes("beban")) {
+    if (Array.isArray(updated.tabelPelaksanaMutuBaku)) {
+      const standardTimes = ["1 hari kerja", "2 hari kerja", "1 hari kerja", "1 hari kerja", "1 hari kerja"];
+      updated.tabelPelaksanaMutuBaku = updated.tabelPelaksanaMutuBaku.map((step: any, idx: number) => ({
+        ...step,
+        waktu: standardTimes[idx % standardTimes.length] || "1 hari kerja",
+      }));
+    }
+  } else if (cmd.includes("bukti") || cmd.includes("output")) {
+    if (Array.isArray(updated.tabelPelaksanaMutuBaku)) {
+      const standardOutputs = [
+        "Lembar disposisi & instruksi pelaksanaan",
+        "Draf dokumen & rekapitulasi data terhimpun",
+        "Format instrumen terverifikasi & terparaf",
+        "Dokumen resmi disahkan & bertanda tangan",
+        "Tanda terima sosialisasi & arsip tersimpan rapi",
+      ];
+      updated.tabelPelaksanaMutuBaku = updated.tabelPelaksanaMutuBaku.map((step: any, idx: number) => ({
+        ...step,
+        output: standardOutputs[idx % standardOutputs.length] || "Dokumen hasil terverifikasi",
+      }));
+    }
+  } else if (cmd.includes("simbol") || cmd.includes("alur") || cmd.includes("flow")) {
+    if (Array.isArray(updated.tabelPelaksanaMutuBaku)) {
+      const len = updated.tabelPelaksanaMutuBaku.length;
+      updated.tabelPelaksanaMutuBaku = updated.tabelPelaksanaMutuBaku.map((step: any, idx: number) => {
+        let flowType = "process";
+        if (idx === 0) flowType = "start";
+        else if (idx === len - 1) flowType = "end";
+        else if (idx === 2 || (step.uraianProsedur || "").toLowerCase().includes("verifikasi") || (step.uraianProsedur || "").toLowerCase().includes("telaah")) {
+          flowType = "decision";
+        }
+        return {
+          ...step,
+          flowType,
+        };
+      });
+    }
+  }
+
+  const curVer = parseFloat(updated.versi || "1.0");
+  updated.versi = (curVer + 0.1).toFixed(1);
+  updated.updatedAt = new Date().toISOString();
+  return updated;
+}
+
+function getLocalChatResponse(message: string, schoolProfile: any, activeSop: any): string {
+  const q = (message || "").toLowerCase();
+  const schoolName = schoolProfile?.namaSekolah || "Sekolah Dasar";
+
+  if (q.includes("halo") || q.includes("hai") || q.includes("assalamu") || q.includes("pagi") || q.includes("siang")) {
+    return `Halo! Saya Asisten Cerdas Penyusun SOP Satuan Pendidikan untuk ${schoolName}.\n\nSaya siap membantu Bapak/Ibu Kepala Sekolah dalam:\n1. Menyusun dokumen SOP baru berformat baku (Permenpan RB No. 35/2012).\n2. Memeriksa dasar hukum & regulasi pendidikan terkini (SNP & Kemendikdasmen).\n3. Menentukan pihak pelaksana, kualifikasi, estimasi waktu, dan output fisik.\n4. Merancang lembar formulir & checklist kendali mutu.\n\nSilakan tanyakan hal apa pun seputar tata kelola operasional sekolah!`;
+  }
+
+  if (q.includes("dasar hukum") || q.includes("uu") || q.includes("regulasi") || q.includes("permen")) {
+    return `Dalam penyusunan SOP Sekolah Dasar, dasar hukum resmi yang wajib dipedomani meliputi:\n\n1. **UU No. 20 Tahun 2003** tentang Sistem Pendidikan Nasional (Pasal 51: Tata kelola berbasis manajemen sekolah).\n2. **PP No. 57 Tahun 2021 jo PP No. 4 Tahun 2022** tentang Standar Nasional Pendidikan (SNP).\n3. **Permendikbudristek No. 47 Tahun 2023** tentang Standar Pengelolaan pada PAUD, Dikdas, dan Dikmen.\n4. **Permenpan RB No. 35 Tahun 2012** tentang Pedoman Penyusunan Standar Operasional Prosedur Administrasi Pemerintahan (Pedoman lambang alur mutu baku).\n5. **Permendikdasmen No. 8 Tahun 2025** tentang Petunjuk Teknis Dana BOSP (khusus SOP Keuangan/ARKAS).`;
+  }
+
+  if (q.includes("langkah") || q.includes("buat sop") || q.includes("alur") || q.includes("cara")) {
+    return `Tahapan baku penyusunan SOP di ${schoolName} meliputi:\n\n1. **Identifikasi Kebutuhan**: Pilih prosedur prioritas dari 13 bidang operasional SD di menu Analisis Kebutuhan.\n2. **Wawancara Draf**: Tentukan pelaksana (Kepala Sekolah, Guru, Tendik, Komite), syarat awal, dan durasi kerja.\n3. **Pelaksana Mutu Baku**: Isi tabel matriks dengan lambang alur flowchart (Mulai/Start, Proses/Persegi, Pengambilan Keputusan/Belah Ketupat, Selesai/End).\n4. **Pemeriksaan Kelengkapan**: Pastikan setiap langkah memiliki output dokumen bukti (berita acara, notulen, lembar disposisi).\n5. **Pengesahan & Sosialisasi**: Kepala Sekolah menandatangani dokumen resmi, membubuhkan stempel sekolah, lalu mengarsipkan berkas dan menyosialisasikan kepada warga sekolah.`;
+  }
+
+  if (q.includes("bos") || q.includes("keuangan") || q.includes("arkas")) {
+    return `Untuk **SOP Pengelolaan Dana BOSP / Keuangan Sekolah**:\n- **Pelaksana Utama**: Kepala Sekolah (Penanggung Jawab), Bendahara BOS, Tim BOS Sekolah, dan Komite Sekolah.\n- **Aplikasi Wajib**: ARKAS (Aplikasi Rencana Kegiatan dan Anggaran Sekolah) dan SIPLah untuk pengadaan barang.\n- **Output Utama**: RKAS yang disahkan dinas, Buku Kas Umum (BKU), Kuitansi Berstempel, Berita Acara Penerimaan Hasil Pekerjaan (BAST), dan Laporan SPJ triwulanan.`;
+  }
+
+  if (q.includes("tppk") || q.includes("kekerasan") || q.includes("bully") || q.includes("perundungan")) {
+    return `Untuk **SOP Pencegahan & Penanganan Kekerasan (TPPK)**:\n- **Regulasi**: Permendikbudristek No. 46 Tahun 2023.\n- **Prinsip Utama**: Kepentingan terbaik bagi anak, kerahasiaan identitas korban, dan non-diskriminasi.\n- **Alur Kerja**: Penerimaan laporan terenkripsi -> Penyelamatan & pengamanan korban -> Mediasi/klarifikasi terpisah -> Rekomendasi sanksi/pembinaan -> Konseling dan pemantauan berkala.`;
+  }
+
+  if (q.includes("supervisi") || q.includes("kinerja") || q.includes("guru")) {
+    return `Untuk **SOP Supervisi Akademik & Penilaian Kinerja Guru (PKG)**:\n- **Pelaksana**: Kepala Sekolah dan Guru Sasaran.\n- **Alur 3 Tahap**: Pra-Observasi (telaah modul ajar) -> Observasi Kelas (penilaian instrumen KBM) -> Pasca-Observasi (refleksi dan tindak lanjut di PMM/e-Kinerja).`;
+  }
+
+  return `Terkait topik "${message}":\n\nUntuk satuan pendidikan dasar ${schoolName}, SOP ini sebaiknya dirancang dengan memperhatikan:\n1. **Aktor Pelaksana**: Minimal melibatkan 2 sampai 4 pihak (Kepala Sekolah, Guru Kelas, Tenaga Administrasi, Komite).\n2. **Keterkaitan Prosedur**: Sinkronkan dengan SOP Administrasi Sekolah dan kalender akademik sekolah dasar.\n3. **Bukti Fisik/Digital**: Setiap tahapan wajib menghasilkan bukti terverifikasi seperti disposisi, daftar hadir, atau berita acara.\n\nBapak/Ibu dapat langsung menggunakan menu **Asisten AI (Buat Draf)** atau **Bank Template** untuk merakit dokumen SOP ini secara otomatis!`;
+}
+
   // API 4: AI Command Refinement
   app.post("/api/gemini/refine-sop", async (req, res) => {
     const { command, sopData, userInstruction, schoolProfile } = req.body;
@@ -1101,18 +1299,8 @@ Kembalikan SELURUH objek SOP yang telah diperbarui dalam format JSON murni yang 
       const normalized = normalizeSopDocument(parsed, sopData);
       return res.json(normalized);
     } catch {
-      const updatedSop = { ...sopData };
-      if (schoolProfile) {
-        updatedSop.identitas = {
-          ...updatedSop.identitas,
-          namaKepalaSekolah: schoolProfile.namaKepalaSekolah || updatedSop.identitas?.namaKepalaSekolah,
-          nip: schoolProfile.nip || updatedSop.identitas?.nip,
-          unitKerja: schoolProfile.namaSekolah || updatedSop.identitas?.unitKerja,
-          disahkanOleh: `Kepala ${schoolProfile.namaSekolah || "Sekolah"}`,
-        };
-      }
-      updatedSop.updatedAt = new Date().toISOString();
-      return res.json(updatedSop);
+      const locallyRefined = refineSopLocally(command, sopData, userInstruction, schoolProfile);
+      return res.json(locallyRefined);
     }
   });
 
@@ -1154,13 +1342,10 @@ SOP yang sedang dibuka: ${activeSop ? activeSop.identitas?.namaSop : "Tidak ada 
         },
       });
 
-      return res.json({ reply: reply || "Berikut panduan SOP sekolah..." });
+      return res.json({ reply: reply || getLocalChatResponse(message, schoolProfile, activeSop) });
     } catch {
       return res.json({
-        reply: `Sebagai asisten SOP Sekolah Dasar, berikut beberapa pedoman utama:
-1. Format Pelaksana Mutu Baku: Setiap tahapan prosedur wajib mencantumkan aktor pelaksana yang jelas (Kepala Sekolah, Guru, Tendik, Komite), persyaratan awal, durasi waktu kerja, dan output dokumen fisik/digital.
-2. Dasar Hukum Resmi: Rujuk UU No. 20/2003 tentang Sisdiknas, PP No. 57/2021 jo PP No. 4/2022 tentang Standar Nasional Pendidikan, serta Permendikbudristek No. 47/2023 tentang Standar Pengelolaan.
-3. Pengesahan & Sosialisasi: Pastikan dokumen disahkan oleh Kepala Sekolah dengan tanda tangan/stempel sebelum disosialisasikan dan diarsipkan dalam map ordner serta Google Drive sekolah.`,
+        reply: getLocalChatResponse(message, schoolProfile, activeSop),
       });
     }
   });

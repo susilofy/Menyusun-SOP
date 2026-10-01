@@ -1,115 +1,112 @@
-# Panduan Lengkap Pembuatan Aplikasi Windows (.exe) Menggunakan Electron
+# Panduan Lengkap Pembuatan Aplikasi Windows Portable (.exe) & Installer
 ## SOP SMART SCHOOL — Penyusun SOP Satuan Pendidikan Sekolah Dasar
 
-Aplikasi ini telah dikonfigurasi penuh dengan **Electron** dan **electron-builder** sehingga Anda dapat menghasilkan file instalasi Windows **`.exe` (Installer Setup)** maupun versi **Portable `.exe`** (langsung jalan tanpa instalasi).
+Aplikasi ini telah dikonfigurasi penuh dengan **Electron** dan **electron-builder** sehingga Anda dapat menghasilkan file **EXE Portable** (langsung jalan tanpa instalasi, cocok untuk flashdisk) maupun file **EXE Setup Installer Resmi Windows**.
 
 ---
 
-### CARA PALING PRAKTIS (1-KLIK): Menggunakan `buat-program-exe.bat`
+### CARA PALING CEPAT & MUDAH (CUKUP 1-KLIK)
 
-Anda tidak perlu mengetik perintah rumit di CMD/PowerShell! Cukup ikuti 3 langkah mudah ini:
+Anda tidak perlu mengetik perintah terminal yang rumit! Sudah disediakan dua skrip otomatis:
 
-1. **Export to ZIP**: Buka menu di Google AI Studio (kanan atas) > pilih **Export to ZIP**.
-2. **Ekstrak ZIP**: Ekstrak file zip hasil unduhan ke folder di laptop Anda.
-3. **Klik Dua Kali**: Cari dan klik 2x file **`buat-program-exe.bat`**.
+#### Pilihan A: Khusus Membuat EXE Portable (Sangat Direkomendasikan)
+1. Ekstrak folder proyek ini di laptop/komputer Anda.
+2. Cari dan klik 2x file: **`buat-portable-exe.bat`**.
+3. Komputer akan otomatis memeriksa sistem, memasang modul, merakit file **`Penyusun SOP Sekolah-Portable-1.0.0.exe`**, dan langsung membuka folder **`release`** saat selesai!
 
-Sistem otomatis akan:
-* Memeriksa kesiapan Node.js di laptop Anda.
-* Menginstal seluruh modul secara otomatis jika belum ada.
-* Mengompilasi dan merakit aplikasi ke dalam file `.exe`.
-* Begitu selesai, folder **`release`** otomatis terbuka menampilkan file installer siap pakai!
+#### Pilihan B: Menu Pilihan Lengkap
+1. Klik 2x file: **`buat-program-exe.bat`**.
+2. Akan muncul menu interaktif:
+   * **[1]** Buat EXE PORTABLE (Langsung jalan tanpa instalasi)
+   * **[2]** Buat EXE INSTALLER (Setup Wizard Windows)
+   * **[3]** Buat KEDUA VERSI SEKALIGUS
+   * **[4]** Uji Coba Mode Desktop (Pratinjau)
+   * **[5]** Buka Folder Hasil `release\`
 
 ---
 
-### A. Persiapan pada Laptop/Komputer Windows Anda
+### A. Persiapan Komputer / Laptop Windows Anda
 
 Sebelum membuat file `.exe`, pastikan komputer Anda telah terpasang:
 
-1. **Node.js (Versi 20 atau 22 LTS disarankan)**
-   * Unduh dari situs resmi: [https://nodejs.org/](https://nodejs.org/)
+1. **Node.js (Versi LTS disarankan v20 atau v22)**
+   * Unduh gratis dari situs resmi: [https://nodejs.org/](https://nodejs.org/)
    * Pilih varian **Windows Installer (.msi) 64-bit**.
-   * Ikuti petunjuk instalasi sampai selesai (centang pilihan npm package manager).
-   * Verifikasi di Command Prompt / PowerShell:
+   * Ikuti wizard instalasi sampai selesai (klik *Next* sampai *Finish*).
+   * Verifikasi ketersediaan Node.js lewat Command Prompt (CMD):
      ```cmd
      node -v
      npm -v
      ```
 
 2. **File Proyek Aplikasi**
-   * Ekspor / unduh kode sumber proyek ini dari AI Studio (menu **Settings / Export to ZIP** atau via Git).
-   * Ekstrak file zip ke folder pilihan di komputer Anda, contoh: `D:\Penyusun-SOP-Sekolah`.
+   * Unduh / ekspor proyek ini dalam format ZIP (dari menu AI Studio: **Export to ZIP** atau Git).
+   * Ekstrak file zip ke lokasi di laptop Anda, contoh: `D:\Penyusun-SOP-Sekolah`.
 
 ---
 
-### B. Langkah Instalasi Dependensi di Windows
+### B. Membuat File EXE Menggunakan Command Prompt (CMD / Terminal)
 
-1. Buka **Command Prompt (CMD)** atau **PowerShell**, atau buka folder proyek di **VS Code**.
-2. Masuk ke folder proyek:
+Bagi Anda yang terbiasa menggunakan Command Prompt (CMD) atau Terminal VS Code:
+
+1. Buka CMD dan arahkan ke folder proyek:
    ```cmd
    cd D:\Penyusun-SOP-Sekolah
    ```
-3. Jalankan perintah instalasi paket:
+
+2. Pasang dependensi (hanya perlu dijalankan sekali saja di awal):
    ```cmd
    npm install
    ```
-   *Tunggu beberapa menit hingga proses pengunduhan modul selesai.*
+
+3. Jalankan salah satu perintah kompilasi sesuai kebutuhan Anda:
+   * **Untuk membuat versi Portable saja (paling cepat):**
+     ```cmd
+     npm run electron:build:portable
+     ```
+   * **Untuk membuat versi Installer Setup saja:**
+     ```cmd
+     npm run electron:build:installer
+     ```
+   * **Untuk membuat kedua versi sekaligus (Portable + Setup):**
+     ```cmd
+     npm run electron:build:win
+     ```
+
+4. Tunggu 1–2 menit sampai muncul pesan sukses. Hasil file `.exe` akan langsung berada di dalam folder **`release\`**.
 
 ---
 
-### C. Pengaturan Kunci API Gemini (Untuk Fitur AI)
+### C. Mengenal Versi Portable vs Installer
 
-Buat file bernama `.env` di folder utama (sejajar dengan `package.json`), lalu isi dengan:
-```env
-GEMINI_API_KEY="AIzaSy...KunciApiGeminiAnda"
-```
-*(Kunci API gratis bisa didapatkan dari [Google AI Studio](https://aistudio.google.com/app/apikey)).*
-
----
-
-### D. Menjalankan Mode Aplikasi Desktop (Uji Coba Langsung)
-
-Untuk mencoba tampilan aplikasi dalam jendela desktop Windows sebelum di-compile ke `.exe`:
-```cmd
-npm run electron:dev
-```
-Aplikasi akan secara otomatis menyalakan server lokal dan membuka jendela desktop mandiri berfitur lengkap (menu bar resmi, cetak dokumen, dan antarmuka responsif).
+| Fitur | Versi Portable (`...-Portable-1.0.0.exe`) | Versi Installer (`...-Setup-1.0.0.exe`) |
+| :--- | :--- | :--- |
+| **Instalasi** | **Tidak perlu instalasi sama sekali.** Klik 2x langsung terbuka. | Membuka jendela setup instalasi standar Windows. |
+| **Izin Admin** | **Tidak butuh hak Administrator.** Bebas dijalankan di laptop sekolah mana pun. | Memerlukan izin instalasi aplikasi ke Program Files. |
+| **Penggunaan Flashdisk** | **Sangat cocok.** Cukup salin satu file `.exe` ke Flashdisk dan bawa ke mana saja. | Harus diinstal ke masing-masing laptop/komputer. |
+| **Penyimpanan Data** | Profil sekolah & draf SOP tersimpan aman di direktori lokal. | Tersimpan di folder AppData komputer. |
+| **Koneksi Internet** | Berjalan offline penuh (ekspor Word/PDF, template, checklist, flow diagram). | Berjalan offline penuh. |
 
 ---
 
-### E. Mengompilasi Menjadi File Installer `.exe` Windows
+### D. Fitur AI dengan Kunci API Gemini (Opsional)
 
-Untuk menghasilkan file `.exe` yang siap dibagikan ke Kepala Sekolah atau Guru:
-
-```cmd
-npm run electron:build:win
-```
-
-Perintah ini akan secara otomatis:
-1. Mem-build frontend Vite dan backend server ke dalam folder `dist/`.
-2. Memaketkan runtime Electron untuk arsitektur Windows x64.
-3. Mengonversi ikon aplikasi menjadi ikon resmi Windows.
-4. Menghasilkan installer setup dan file portable di dalam folder **`release/`**.
+Aplikasi sudah memiliki generator standar baku lengkap untuk Sekolah Dasar sehingga **tetap dapat membuat SOP secara offline tanpa AI**. Namun jika Anda ingin mengaktifkan kecerdasan buatan Gemini:
+1. Buat file bernama `.env` di folder proyek (sejajar dengan `package.json`).
+2. Tuliskan kunci API Gemini Anda:
+   ```env
+   GEMINI_API_KEY="AIzaSy...KunciApiGeminiAnda"
+   ```
+   *(Kunci API gratis bisa didapatkan di [Google AI Studio](https://aistudio.google.com/app/apikey)).*
 
 ---
 
-### F. Lokasi Hasil File `.exe`
+### E. Fitur Khusus Desktop yang Sudah Terintegrasi
 
-Setelah proses build selesai, buka folder **`release`** di dalam folder proyek Anda:
-1. **`Penyusun SOP Sekolah-Setup-1.0.0.exe`**
-   * Installer resmi Windows (NSIS).
-   * Saat diklik dua kali, akan muncul wizard instalasi, membuat shortcut di Start Menu dan Desktop.
-2. **`Penyusun SOP Sekolah-Portable-1.0.0.exe`**
-   * Aplikasi mandiri (portable).
-   * Bisa langsung dimasukkan ke Flashdisk dan dijalankan di komputer/laptop mana saja tanpa perlu install.
-
----
-
-### G. Fitur Desktop Khusus yang Sudah Diintegrasikan
-
-* **Menu Bar Resmi Berbahasa Indonesia**:
-  * **Berkas**: Cetak Dokumen (Ctrl+P), Keluar (Ctrl+Q).
+* **Menu Bar Resmi Desktop**:
+  * **Berkas**: Cetak Dokumen Langsung (Ctrl+P), Keluar Aplikasi (Ctrl+Q).
   * **Edit**: Undo, Redo, Cut, Copy, Paste, Select All.
-  * **Tampilan**: Reload (F5/Ctrl+R), Layar Penuh (F11), Zoom Kontrol, Alat Pengembang/DevTools (Ctrl+Shift+I).
-  * **Bantuan**: Link situs www.gurumerangkum.com & Dialog info aplikasi.
-* **Penyimpanan Offline Permanen**: File default tersimpan lokal di dalam komputer.
+  * **Tampilan**: Reload Halaman (F5/Ctrl+R), Mode Layar Penuh (F11), Zoom Tampilan (Ctrl + / -), Alat Pengembang / DevTools (Ctrl+Shift+I).
+  * **Bantuan**: Link Portal Pengembang www.gurumerangkum.com & Kotak Dialog Info Aplikasi.
 * **Ekspor Berkas**: Ekspor dokumen Word (.docx) dan PDF Landscape A4 langsung tersimpan di komputer pengguna.
+* **Penyimpanan Data Permanen**: Menggunakan penyimpanan offline ganda (Browser LocalStorage + File Server Lokal).

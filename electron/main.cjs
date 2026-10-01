@@ -1,7 +1,37 @@
 const { app, BrowserWindow, shell, ipcMain, Menu } = require("electron");
 const path = require("path");
+const fs = require("fs");
 const http = require("http");
 const { fork } = require("child_process");
+
+// Load .env if present in any of the potential locations
+function loadEnvironmentVariables() {
+  const possibleEnvLocations = [
+    path.join(process.cwd(), ".env"),
+    process.env.PORTABLE_EXECUTABLE_DIR ? path.join(process.env.PORTABLE_EXECUTABLE_DIR, ".env") : null,
+    path.join(path.dirname(process.execPath), ".env"),
+    process.resourcesPath ? path.join(process.resourcesPath, ".env") : null,
+    path.join(app.getPath("userData"), ".env"),
+    path.join(__dirname, "..", ".env"),
+  ].filter(Boolean);
+
+  for (const envPath of possibleEnvLocations) {
+    if (fs.existsSync(envPath)) {
+      try {
+        require("dotenv").config({ path: envPath });
+        break;
+      } catch (err) {
+        console.warn("Could not load env from:", envPath, err);
+      }
+    }
+  }
+}
+
+try {
+  loadEnvironmentVariables();
+} catch (e) {
+  console.warn("loadEnvironmentVariables error:", e);
+}
 
 let mainWindow = null;
 let serverProcess = null;
@@ -59,11 +89,16 @@ function startLocalServer() {
   }
 
   try {
+    const portableDir = process.env.PORTABLE_EXECUTABLE_DIR || "";
+    const userDataDir = app.getPath("userData");
+
     serverProcess = fork(serverScriptPath, [], {
       env: {
         ...process.env,
         NODE_ENV: "production",
         PORT: String(SERVER_PORT),
+        USER_DATA_PATH: userDataDir,
+        PORTABLE_EXECUTABLE_DIR: portableDir,
       },
       stdio: "inherit",
     });
@@ -254,6 +289,9 @@ async function createWindow() {
 
 // App lifecycle
 app.whenReady().then(() => {
+  if (process.platform === "win32") {
+    app.setAppUserModelId("com.gurumerangkum.penyusunsop");
+  }
   createWindow();
 
   app.on("activate", () => {

@@ -380,104 +380,157 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </span>
         </div>
 
-        {/* 1-Click BAT Feature Banner */}
-        <div className="p-4 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 rounded-xl border border-emerald-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div className="space-y-1">
-            <div className="flex items-center space-x-2">
-              <span className="px-2 py-0.5 rounded bg-emerald-600 text-white text-[11px] font-bold uppercase tracking-wider">
-                Metode 1-Klik Paling Mudah
-              </span>
-              <span className="text-xs font-bold text-emerald-900">
-                File: buat-program-exe.bat
-              </span>
+        {/* 1-Click BAT Feature Banners */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="p-4 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 rounded-xl border border-emerald-300 shadow-xs flex flex-col justify-between gap-3">
+            <div className="space-y-1">
+              <div className="flex items-center space-x-2">
+                <span className="px-2 py-0.5 rounded bg-emerald-600 text-white text-[10px] font-bold uppercase tracking-wider">
+                  1-Klik Cepat (Rekomendasi)
+                </span>
+                <span className="text-xs font-bold text-emerald-950">
+                  buat-portable-exe.bat
+                </span>
+              </div>
+              <p className="text-[11px] text-emerald-900 leading-relaxed">
+                Khusus membuat <strong>EXE Portable</strong> (langsung jalan tanpa instalasi). Sangat praktis disimpan di flashdisk dan tidak memerlukan izin admin laptop.
+              </p>
             </div>
-            <p className="text-xs text-emerald-800">
-              Cukup ekstrak file ZIP proyek ini di laptop Windows Anda, lalu <strong>klik 2x file buat-program-exe.bat</strong>. Seluruh proses instalasi dependensi dan perakitan ke file .exe akan berjalan otomatis!
-            </p>
+            <div className="flex items-center justify-between pt-1">
+              <span className="text-[10px] font-semibold text-emerald-800">Tinggal klik 2x file .bat</span>
+              <button
+                type="button"
+                onClick={() => copyToClipboard("buat-portable-exe.bat", "bat-portable")}
+                className="px-2.5 py-1.5 bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-300 font-semibold rounded-lg text-xs flex items-center space-x-1.5 shadow-2xs transition-colors cursor-pointer"
+              >
+                {copiedCmd === "bat-portable" ? (
+                  <>
+                    <Check size={13} className="text-emerald-600" />
+                    <span>Tersalin!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy size={13} />
+                    <span>Salin Nama File</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
-          <div className="flex items-center space-x-2 shrink-0">
-            <button
-              type="button"
-              onClick={() => copyToClipboard("buat-program-exe.bat", "bat")}
-              className="px-3 py-1.5 bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-300 font-semibold rounded-lg text-xs flex items-center space-x-1.5 shadow-2xs transition-colors cursor-pointer"
-            >
-              {copiedCmd === "bat" ? (
-                <>
-                  <Check size={14} className="text-emerald-600" />
-                  <span>Nama File Tersalin!</span>
-                </>
-              ) : (
-                <>
-                  <Copy size={14} />
-                  <span>Salin Nama File</span>
-                </>
-              )}
-            </button>
+
+          <div className="p-4 bg-gradient-to-r from-indigo-50 via-blue-50 to-indigo-50 rounded-xl border border-indigo-200 shadow-xs flex flex-col justify-between gap-3">
+            <div className="space-y-1">
+              <div className="flex items-center space-x-2">
+                <span className="px-2 py-0.5 rounded bg-indigo-600 text-white text-[10px] font-bold uppercase tracking-wider">
+                  Menu Lengkap
+                </span>
+                <span className="text-xs font-bold text-indigo-950">
+                  buat-program-exe.bat
+                </span>
+              </div>
+              <p className="text-[11px] text-indigo-900 leading-relaxed">
+                Menu interaktif lengkap untuk memilih pembuatan <strong>Portable</strong>, <strong>Installer Resmi (Setup)</strong>, ataupun keduanya sekaligus.
+              </p>
+            </div>
+            <div className="flex items-center justify-between pt-1">
+              <span className="text-[10px] font-semibold text-indigo-800">Menu pilihan 1 / 2 / 3</span>
+              <button
+                type="button"
+                onClick={() => copyToClipboard("buat-program-exe.bat", "bat-menu")}
+                className="px-2.5 py-1.5 bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-300 font-semibold rounded-lg text-xs flex items-center space-x-1.5 shadow-2xs transition-colors cursor-pointer"
+              >
+                {copiedCmd === "bat-menu" ? (
+                  <>
+                    <Check size={13} className="text-emerald-600" />
+                    <span>Tersalin!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy size={13} />
+                    <span>Salin Nama File</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-          <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-slate-800 flex items-center space-x-1.5">
-                <Terminal size={14} className="text-indigo-600" />
-                <span>1. Uji Coba Mode Desktop</span>
+              <span className="font-bold text-slate-800 flex items-center space-x-1">
+                <Terminal size={13} className="text-indigo-600" />
+                <span className="text-[11px]">1. Buat EXE Portable</span>
               </span>
               <button
                 type="button"
-                onClick={() => copyToClipboard("npm run electron:dev", "dev")}
-                className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 flex items-center space-x-1 cursor-pointer bg-white px-2 py-0.5 rounded border border-slate-200"
+                onClick={() => copyToClipboard("npm run electron:build:portable", "portable-cmd")}
+                className="text-[10px] font-semibold text-indigo-600 hover:text-indigo-800 flex items-center space-x-1 cursor-pointer bg-white px-1.5 py-0.5 rounded border border-slate-200"
               >
-                {copiedCmd === "dev" ? (
-                  <>
-                    <Check size={12} className="text-emerald-600" />
-                    <span className="text-emerald-600">Tersalin!</span>
-                  </>
+                {copiedCmd === "portable-cmd" ? (
+                  <span className="text-emerald-600 font-bold">✓ Tersalin</span>
                 ) : (
-                  <>
-                    <Copy size={12} />
-                    <span>Salin</span>
-                  </>
+                  <span>Salin</span>
                 )}
               </button>
             </div>
-            <p className="text-[11px] text-slate-500">
-              Menjalankan aplikasi langsung dalam jendela desktop Windows mandiri sebelum di-compile:
+            <p className="text-[10px] text-slate-500">
+              Menghasilkan berkas portable langsung jalan tanpa instalasi di <code className="bg-slate-200 px-1 py-0.5 rounded text-slate-800">release/</code>:
             </p>
-            <pre className="p-2 bg-slate-900 text-emerald-400 font-mono text-[11px] rounded-lg overflow-x-auto">
-              npm run electron:dev
+            <pre className="p-1.5 bg-slate-900 text-emerald-400 font-mono text-[10px] rounded-lg overflow-x-auto">
+              npm run electron:build:portable
             </pre>
           </div>
 
-          <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-slate-800 flex items-center space-x-1.5">
-                <Terminal size={14} className="text-indigo-600" />
-                <span>2. Buat File Installer .EXE Windows</span>
+              <span className="font-bold text-slate-800 flex items-center space-x-1">
+                <Terminal size={13} className="text-indigo-600" />
+                <span className="text-[11px]">2. Buat Setup Installer</span>
               </span>
               <button
                 type="button"
-                onClick={() => copyToClipboard("npm run electron:build:win", "build")}
-                className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 flex items-center space-x-1 cursor-pointer bg-white px-2 py-0.5 rounded border border-slate-200"
+                onClick={() => copyToClipboard("npm run electron:build:installer", "installer-cmd")}
+                className="text-[10px] font-semibold text-indigo-600 hover:text-indigo-800 flex items-center space-x-1 cursor-pointer bg-white px-1.5 py-0.5 rounded border border-slate-200"
               >
-                {copiedCmd === "build" ? (
-                  <>
-                    <Check size={12} className="text-emerald-600" />
-                    <span className="text-emerald-600">Tersalin!</span>
-                  </>
+                {copiedCmd === "installer-cmd" ? (
+                  <span className="text-emerald-600 font-bold">✓ Tersalin</span>
                 ) : (
-                  <>
-                    <Copy size={12} />
-                    <span>Salin</span>
-                  </>
+                  <span>Salin</span>
                 )}
               </button>
             </div>
-            <p className="text-[11px] text-slate-500">
-              Mengompilasi proyek menjadi file installer setup (.exe) & portable (.exe) di folder <code className="bg-slate-200 px-1 py-0.5 rounded text-slate-800">release/</code>:
+            <p className="text-[10px] text-slate-500">
+              Menghasilkan installer wizard resmi Windows (NSIS) dengan shortcut desktop:
             </p>
-            <pre className="p-2 bg-slate-900 text-emerald-400 font-mono text-[11px] rounded-lg overflow-x-auto">
-              npm run electron:build:win
+            <pre className="p-1.5 bg-slate-900 text-emerald-400 font-mono text-[10px] rounded-lg overflow-x-auto">
+              npm run electron:build:installer
+            </pre>
+          </div>
+
+          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-slate-800 flex items-center space-x-1">
+                <Terminal size={13} className="text-indigo-600" />
+                <span className="text-[11px]">3. Uji Coba Desktop</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => copyToClipboard("npm run electron:dev", "dev-cmd")}
+                className="text-[10px] font-semibold text-indigo-600 hover:text-indigo-800 flex items-center space-x-1 cursor-pointer bg-white px-1.5 py-0.5 rounded border border-slate-200"
+              >
+                {copiedCmd === "dev-cmd" ? (
+                  <span className="text-emerald-600 font-bold">✓ Tersalin</span>
+                ) : (
+                  <span>Salin</span>
+                )}
+              </button>
+            </div>
+            <p className="text-[10px] text-slate-500">
+              Membuka jendela desktop interaktif langsung di komputer tanpa kompilasi:
+            </p>
+            <pre className="p-1.5 bg-slate-900 text-emerald-400 font-mono text-[10px] rounded-lg overflow-x-auto">
+              npm run electron:dev
             </pre>
           </div>
         </div>
@@ -485,12 +538,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <div className="p-3 bg-indigo-50/70 rounded-xl border border-indigo-100 text-[11px] text-indigo-900 space-y-1">
           <p className="font-semibold flex items-center space-x-1.5 text-indigo-800">
             <Info size={14} />
-            <span>Catatan Persiapan di Windows:</span>
+            <span>Petunjuk Penting Pembuatan & Penggunaan di Windows:</span>
           </p>
           <ul className="list-disc pl-5 space-y-0.5 text-indigo-950/80">
-            <li>Pastikan laptop/komputer sudah terpasang <strong>Node.js (v20+ LTS)</strong> dari nodejs.org.</li>
-            <li>Hasil build menghasilkan 2 file di folder <strong>release/</strong>: <em>Setup Installer</em> dan <em>Portable EXE</em>.</li>
-            <li>Panduan lengkap langkah demi langkah tersedia di berkas <strong>PANDUAN_BUILD_EXE_WINDOWS.md</strong> pada direktori utama.</li>
+            <li>Pastikan laptop/komputer sudah terpasang <strong>Node.js (v20+ LTS)</strong> dari <a href="https://nodejs.org/" target="_blank" rel="noopener noreferrer" className="underline font-semibold">nodejs.org</a>.</li>
+            <li>Hasil file EXE akan langsung tersimpan di folder <strong>release/</strong> dengan nama: <em>Penyusun SOP Sekolah-Portable-1.0.0.exe</em>.</li>
+            <li>Versi portable dapat disalin ke <strong>Flashdisk</strong> atau Google Drive dan langsung dijalankan di laptop guru lain tanpa instalasi.</li>
+            <li>Buku petunjuk lengkap tersedia di berkas <strong>PANDUAN_BUILD_EXE_WINDOWS.md</strong>.</li>
           </ul>
         </div>
       </div>
